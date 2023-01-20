@@ -1,3 +1,4 @@
+from asyncio.windows_events import NULL
 from flask import Flask, request
 from flask_restful import Api, Resource
 import mariadb
@@ -25,8 +26,16 @@ class login(Resource):
         passwd = request.headers.get("PASS")
         login = request.headers.get("LOGIN")
         if CheckLogin(login, passwd) == True:
-            newLogin = request.headers.get("newPASS")
+            newPass = request.headers.get("newPASS")
             newLogin = request.headers.get("newLOGIN")
+            print(newLogin, newPass)
+            if newPass != "" and newLogin != "":
+                if AddNewUser(newPass, newLogin) == True:
+                    return True
+                else:
+                    print("SQL error")
+        return False, 401
+
         
 
 api.add_resource(login, "/login")
@@ -63,8 +72,14 @@ api.add_resource(dataMove, "/datamove/<string:name>/<int:test>")
 def CheckLogin(login, passwd):
     connection = mariadb.connect(user="python", password="python1234", host="127.0.0.1", port=3306, database="Terminator")
     cursor = connection.cursor()
-    query = "SELECT user_name, user_passwd FROM users WHERE user_name = " + "\"" + login + "\";"
-    cursor.execute(query)
+    data = (login,)
+    query = "SELECT user_name, user_passwd FROM users WHERE user_name = %s;"
+    try:
+        cursor.execute(query, data)
+        connection.commit()
+    except Exception as e:
+        print(e)
+        return False
     result = cursor.fetchone()
     connection.close()
 
@@ -76,9 +91,30 @@ def CheckLogin(login, passwd):
 def AddNewUser(login, passwd):
     connection = mariadb.connect(user="python", password="python1234", host="127.0.0.1", port=3306, database="Terminator")
     cursor = connection.cursor()
-    query = "INSERT INTO users(user_name, user_passwd) VALUES (?, ?)", (login, passwd);
-    cursor.execute(query)
+
+    data = (login,)
+    query = "SELECT user_name FROM users WHERE user_name = %s"
+    try:
+        cursor.execute(query, data)
+        connection.commit()
+    except Exception as e:
+        print(e)
+        return False
+    result = cursor.fetchone()
+    if result:
+        if result[0] == login:
+            return False, 401
+    
+    data = (login, passwd)
+    query = "INSERT INTO users(user_name, user_passwd) VALUES (%s, %s);"
+    try:
+        cursor.execute(query, data)
+        connection.commit()
+    except Exception as e:
+        print(e)
+        return False, 401
     connection.close()
+    return True
 
 
 ## URUCHAMIANIE FLASK ##
