@@ -24,6 +24,7 @@
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="app.py" />
+    <Compile Include="app_test.py" />
   </ItemGroup>
   <ItemGroup>
     <Content Include="requirements.txt" />
