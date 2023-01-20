@@ -46,13 +46,23 @@ class data(Resource):
         login = request.headers.get("LOGIN")
         listName = request.headers.get("LISTNAME")
         if CheckLogin(login, passwd) == False:
-            return "error", 401
+            return "error", 401, {'Content-Type': 'application/json'}
         result = GetListFromServer(login, listName)
         return result
 
     def put(self):
+        passwd = request.headers.get("PASS")
+        login = request.headers.get("LOGIN")
+        listName = request.headers.get("LISTNAME")
+        body = request.json
+        body = json.dumps(body, ensure_ascii=False)
+        if CheckLogin(login, passwd) == False:
+            return "error", 401, {'Content-Type': 'application/json'}
+        if SendListToServer(login, listName, body):
+            return "OK", 200, {'Content-Type': 'application/json'}
+        else:
+            return "ERROR", 400, {'Content-Type': 'application/json'}
 
-        return {"data":"Updated"}
 
     def delete(self):
         return {"data":"Deleted"}
@@ -139,6 +149,20 @@ def GetListFromServer(login, listName):
 
     return json.loads(result), 200, {'ContentType':'application/json'}
 
+def SendListToServer(login, listName, body):
+    connection = mariadb.connect(user="python", password="python1234", host="127.0.0.1", port=3306, database="Terminator")
+    cursor = connection.cursor()
+    
+    data = (body, login, listName)
+    query = "UPDATE user_lists SET list_content = %s WHERE user_name = %s AND user_name_list_name = %s;"
+    try:
+        cursor.execute(query, data)
+        connection.commit()
+    except Exception as e:
+        print(e)
+        return "error", 400
+    connection.close()
+    return "OK", 200
 
 ## URUCHAMIANIE FLASK ##
 if __name__ == "__main__":
