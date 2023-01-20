@@ -1,9 +1,9 @@
 from asyncio.windows_events import NULL
-from flask import Flask, request
+from flask import Flask, request, json, jsonify
 from flask_restful import Api, Resource
 import mariadb
 import hashlib
-
+import json
 
 ## TWORZENIE FLASK  I MONGO ##
 app = Flask(__name__) #create app flask
@@ -133,7 +133,11 @@ def GetListFromServer(login, listName):
         return "error", 400
     result = cursor.fetchone()
     connection.close()
-    return result
+
+    result = str(result)
+    result = result[2:-3]
+
+    return json.loads(result), 200, {'ContentType':'application/json'}
 
 
 ## URUCHAMIANIE FLASK ##
