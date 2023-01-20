@@ -65,7 +65,16 @@ class data(Resource):
 
 
     def delete(self):
-        return {"data":"Deleted"}
+        passwd = request.headers.get("PASS")
+        login = request.headers.get("LOGIN")
+        listName = request.headers.get("LISTNAME")
+        if CheckLogin(login, passwd) == False:
+            return "error", 401, {'Content-Type': 'application/json'}
+        if DeleteResource(login, listName):
+            return "OK", 200, {'Content-Type': 'application/json'}
+        else:
+            return "ERROR", 400, {'Content-Type': 'application/json'}
+
 
 api.add_resource(data, "/data")
 
@@ -163,6 +172,22 @@ def SendListToServer(login, listName, body):
         return "error", 400
     connection.close()
     return "OK", 200
+
+def DeleteResource(login, listName):
+    connection = mariadb.connect(user="python", password="python1234", host="127.0.0.1", port=3306, database="Terminator")
+    cursor = connection.cursor()
+
+    data = (login, listName)
+    query = "DELETE FROM user_lists WHERE user_name = %s AND user_name_list_name = %s;"
+    try:
+        cursor.execute(query, data)
+        connection.commit()
+    except Exception as e:
+        print(e)
+        return False
+    connection.close()
+    return True
+
 
 ## URUCHAMIANIE FLASK ##
 if __name__ == "__main__":
