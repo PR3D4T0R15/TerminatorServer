@@ -20,7 +20,7 @@ class login(Resource):
         if CheckLogin(login, passwd) == False:
             return "error", 401
         else:
-            return {"user":login, "status":"logged"}
+            return "OK", 202
 
     def put(self):
         passwd = request.headers.get("PASS")
@@ -28,12 +28,11 @@ class login(Resource):
         if CheckLogin(login, passwd) == True:
             newPass = request.headers.get("newPASS")
             newLogin = request.headers.get("newLOGIN")
-            print(newLogin, newPass)
             if newPass != "" and newLogin != "":
-                if AddNewUser(newPass, newLogin) == True:
-                    return True
+                if AddNewUser(newLogin, newPass) == True:
+                    return True, 201
                 else:
-                    print("SQL error")
+                    return False, 401
         return False, 401
 
         
@@ -42,10 +41,14 @@ api.add_resource(login, "/login")
 
 class data(Resource):
 
-    def get(self, name, test):
+    def get(self):
         passwd = request.headers.get("PASS")
         login = request.headers.get("LOGIN")
-        return {"name":name, "test":test}
+        listName = request.headers.get("LISTNAME")
+        if CheckLogin(login, passwd) == False:
+            return "error", 401
+        result = GetListFromServer(login, listName)
+        return result
 
     def put(self):
 
@@ -54,7 +57,7 @@ class data(Resource):
     def delete(self):
         return {"data":"Deleted"}
 
-api.add_resource(data, "/data/<string:name>/<int:test>")
+api.add_resource(data, "/data")
 
 class dataMove(Resource):
 
@@ -115,6 +118,22 @@ def AddNewUser(login, passwd):
         return False, 401
     connection.close()
     return True
+
+def GetListFromServer(login, listName):
+    connection = mariadb.connect(user="python", password="python1234", host="127.0.0.1", port=3306, database="Terminator")
+    cursor = connection.cursor()
+
+    data = (login, listName)
+    query = "SELECT list_content FROM user_lists WHERE user_name = %s AND user_name_list_name = %s;"
+    try:
+        cursor.execute(query, data)
+        connection.commit()
+    except Exception as e:
+        print(e)
+        return "error", 400
+    result = cursor.fetchone()
+    connection.close()
+    return result
 
 
 ## URUCHAMIANIE FLASK ##
