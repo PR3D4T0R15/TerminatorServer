@@ -24,7 +24,10 @@ class login(Resource):
     def put(self):
         passwd = request.headers.get("PASS")
         login = request.headers.get("LOGIN")
-        return {"user":login, "status":"created"}
+        if CheckLogin(login, passwd) == True:
+            newLogin = request.headers.get("newPASS")
+            newLogin = request.headers.get("newLOGIN")
+        
 
 api.add_resource(login, "/login")
 
@@ -62,15 +65,20 @@ def CheckLogin(login, passwd):
     cursor = connection.cursor()
     query = "SELECT user_name, user_passwd FROM users WHERE user_name = " + "\"" + login + "\";"
     cursor.execute(query)
+    result = cursor.fetchone()
+    connection.close()
 
-    if cursor["user_name"] == login and cursor["user_passwd"] == passwd:
+    if result[0] == login and result[1] == passwd:
         return True
     else:
         return False
 
 def AddNewUser(login, passwd):
-    
-
+    connection = mariadb.connect(user="python", password="python1234", host="127.0.0.1", port=3306, database="Terminator")
+    cursor = connection.cursor()
+    query = "INSERT INTO users(user_name, user_passwd) VALUES (?, ?)", (login, passwd);
+    cursor.execute(query)
+    connection.close()
 
 
 ## URUCHAMIANIE FLASK ##
