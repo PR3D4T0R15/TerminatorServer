@@ -42,11 +42,19 @@ class data(Resource):
         passwd = request.headers.get("PASS")
         login = request.headers.get("LOGIN")
         listName = request.headers.get("LISTNAME")
+        getType = request.args['type']
         if CheckLogin(login, passwd) == False:
             return "error", 401, {'Content-Type': 'application/json'}
-        result = GetListFromServer(login, listName)
-        if result == "":
-            return "EMPTY", 404
+        if getType == "one":
+            result = GetListFromServer(login, listName)
+            if result == "":
+                return "EMPTY", 404
+        elif getType == "all":
+            result = GetAllListFromServer(login)
+            if result == "":
+                return "EMPTY", 404
+        else:
+            return "ERROR", 404
         return json.loads(result)
 
     def post(self):
@@ -191,6 +199,29 @@ def GetListFromServer(login, listName):
 
     result = str(result)
     result = result[2:-3]
+
+    return result
+
+def GetAllListFromServer(login):
+    connection = mariadb.connect(user="python", password="python1234", host="127.0.0.1", port=3306, database="Terminator")
+    cursor = connection.cursor()
+
+    data = (login,)
+    query = "SELECT user_name_list_name FROM user_lists WHERE user_name = %s;"
+    try:
+        cursor.execute(query, data)
+        connection.commit()
+    except Exception as e:
+        print(e)
+        return False
+    
+    result = "["
+    for name in cursor:
+        name = str(name)
+        name = name[2:-3]
+        result += "{\"name\":\"" + name + "\"},"
+    result +="]"
+    result = result.replace("},]", "}]")
 
     return result
 
