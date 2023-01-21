@@ -120,7 +120,7 @@ def CheckLogin(login, passwd):
     connection = mariadb.connect(user="python", password="python1234", host="127.0.0.1", port=3306, database="Terminator")
     cursor = connection.cursor()
     data = (login,)
-    query = "SELECT user_name, user_passwd FROM users WHERE user_name = %s;"
+    query = "SELECT user_passwd FROM users WHERE user_name = %s;"
     try:
         cursor.execute(query, data)
         connection.commit()
@@ -129,9 +129,11 @@ def CheckLogin(login, passwd):
         return False
     result = cursor.fetchone()
     connection.close()
-
-    if result[0] == login and result[1] == passwd:
-        return True
+    if result is not None:
+        if (result[0]) == passwd:
+            return True
+        else:
+            return False
     else:
         return False
 
