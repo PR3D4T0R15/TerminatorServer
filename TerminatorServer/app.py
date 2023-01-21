@@ -35,9 +35,6 @@ class login(Resource):
                     return False, 401
         return False, 401
 
-        
-
-api.add_resource(login, "/login")
 
 class data(Resource):
 
@@ -48,9 +45,9 @@ class data(Resource):
         if CheckLogin(login, passwd) == False:
             return "error", 401, {'Content-Type': 'application/json'}
         result = GetListFromServer(login, listName)
-        return result
+        return json.loads(result)
 
-    def put(self):
+    def post(self):
         passwd = request.headers.get("PASS")
         login = request.headers.get("LOGIN")
         listName = request.headers.get("LISTNAME")
@@ -58,11 +55,24 @@ class data(Resource):
         body = json.dumps(body, ensure_ascii=False)
         if CheckLogin(login, passwd) == False:
             return "error", 401, {'Content-Type': 'application/json'}
-        if SendListToServer(login, listName, body):
+        if UpdateListOnServer(login, listName, body):
             return "OK", 200, {'Content-Type': 'application/json'}
         else:
             return "ERROR", 400, {'Content-Type': 'application/json'}
 
+    def put(self):
+        passwd = request.headers.get("PASS")
+        login = request.headers.get("LOGIN")
+        listName = request.headers.get("LISTNAME")
+        body = request.json
+        body = json.dumps(body, ensure_ascii=False)
+        print(body)
+        if CheckLogin(login, passwd) == False:
+            return "error", 401, {'Content-Type': 'application/json'}
+        if CreateListOnServer(login, listName, body):
+            return "OK", 200, {'Content-Type': 'application/json'}
+        else:
+            return "ERROR", 400, {'Content-Type': 'application/json'}
 
     def delete(self):
         passwd = request.headers.get("PASS")
@@ -76,17 +86,23 @@ class data(Resource):
             return "ERROR", 400, {'Content-Type': 'application/json'}
 
 
-api.add_resource(data, "/data")
-
 class dataMove(Resource):
 
-    def get(self, name, test):
-        return {"name":name, "test":test}
+    def put(self):
+        passwd = request.headers.get("PASS")
+        login = request.headers.get("LOGIN")
+        listName = request.headers.get("LISTNAME")
+        destUser = request.headers.get("DESTUSER")
+        if CheckLogin(login, passwd) == False:
+            return "error", 401, {'Content-Type': 'application/json'}
+        if SendListToUser(login, destUser, listName):
+            return "OK", 200, {'Content-Type': 'application/json'}
+        else:
+            return "ERROR", 400, {'Content-Type': 'application/json'}
 
-    def post(self):
-        return {"data":"Posted"}
-
-api.add_resource(dataMove, "/datamove/<string:name>/<int:test>")
+api.add_resource(login, "/login")
+api.add_resource(data, "/data")
+api.add_resource(dataMove, "/datamove")
 
 
 
@@ -109,6 +125,9 @@ def CheckLogin(login, passwd):
         return True
     else:
         return False
+
+def CheckIfExist(listName):
+
 
 def AddNewUser(login, passwd):
     connection = mariadb.connect(user="python", password="python1234", host="127.0.0.1", port=3306, database="Terminator")
@@ -155,10 +174,10 @@ def GetListFromServer(login, listName):
 
     result = str(result)
     result = result[2:-3]
+    
+    return result
 
-    return json.loads(result), 200, {'ContentType':'application/json'}
-
-def SendListToServer(login, listName, body):
+def UpdateListOnServer(login, listName, body):
     connection = mariadb.connect(user="python", password="python1234", host="127.0.0.1", port=3306, database="Terminator")
     cursor = connection.cursor()
     
@@ -169,9 +188,24 @@ def SendListToServer(login, listName, body):
         connection.commit()
     except Exception as e:
         print(e)
-        return "error", 400
+        return False
     connection.close()
-    return "OK", 200
+    return True
+
+def CreateListOnServer(login, listName, body):
+    connection = mariadb.connect(user="python", password="python1234", host="127.0.0.1", port=3306, database="Terminator")
+    cursor = connection.cursor()
+    
+    data = (login, listName, body)
+    query = "INSERT INTO user_lists(user_name, user_name_list_name, list_content) VALUES (%s, %s, %s);"
+    try:
+        cursor.execute(query, data)
+        connection.commit()
+    except Exception as e:
+        print(e)
+        return False
+    connection.close()
+    return True
 
 def DeleteResource(login, listName):
     connection = mariadb.connect(user="python", password="python1234", host="127.0.0.1", port=3306, database="Terminator")
@@ -187,6 +221,14 @@ def DeleteResource(login, listName):
         return False
     connection.close()
     return True
+
+def SendListToUser(login, destUser, listName):
+    jsonData = str(GetListFromServer(login, listName))
+    if CreateListOnServer(destUser, listName, jsonData):
+        return True
+    else:
+        return False
+    
 
 
 ## URUCHAMIANIE FLASK ##
