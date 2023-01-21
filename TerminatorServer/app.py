@@ -45,6 +45,8 @@ class data(Resource):
         if CheckLogin(login, passwd) == False:
             return "error", 401, {'Content-Type': 'application/json'}
         result = GetListFromServer(login, listName)
+        if result == "":
+            return "EMPTY", 404
         return json.loads(result)
 
     def post(self):
@@ -66,7 +68,6 @@ class data(Resource):
         listName = request.headers.get("LISTNAME")
         body = request.json
         body = json.dumps(body, ensure_ascii=False)
-        print(body)
         if CheckLogin(login, passwd) == False:
             return "error", 401, {'Content-Type': 'application/json'}
         if CreateListOnServer(login, listName, body):
@@ -126,8 +127,24 @@ def CheckLogin(login, passwd):
     else:
         return False
 
-def CheckIfExist(listName):
+def CheckIfDataExist(login, listName):
+    connection = mariadb.connect(user="python", password="python1234", host="127.0.0.1", port=3306, database="Terminator")
+    cursor = connection.cursor()
 
+    data = (login,listName)
+    query = "SELECT 1 FROM user_lists WHERE user_name = %s AND user_name_list_name = %s"
+    try:
+        cursor.execute(query, data)
+        connection.commit()
+    except Exception as e:
+        print(e)
+        return False
+    result = cursor.fetchone()
+    if result:
+        if result[0] == 1:
+            return True
+        else:
+            False
 
 def AddNewUser(login, passwd):
     connection = mariadb.connect(user="python", password="python1234", host="127.0.0.1", port=3306, database="Terminator")
@@ -168,13 +185,13 @@ def GetListFromServer(login, listName):
         connection.commit()
     except Exception as e:
         print(e)
-        return "error", 400
+        return False
     result = cursor.fetchone()
     connection.close()
 
     result = str(result)
     result = result[2:-3]
-    
+
     return result
 
 def UpdateListOnServer(login, listName, body):
@@ -193,6 +210,9 @@ def UpdateListOnServer(login, listName, body):
     return True
 
 def CreateListOnServer(login, listName, body):
+    if CheckIfDataExist(login, listName):
+        return False
+
     connection = mariadb.connect(user="python", password="python1234", host="127.0.0.1", port=3306, database="Terminator")
     cursor = connection.cursor()
     
@@ -223,6 +243,9 @@ def DeleteResource(login, listName):
     return True
 
 def SendListToUser(login, destUser, listName):
+    if CheckIfDataExist(destUser, listName):
+        return False
+
     jsonData = str(GetListFromServer(login, listName))
     if CreateListOnServer(destUser, listName, jsonData):
         return True
